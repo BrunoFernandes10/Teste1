@@ -1,0 +1,26 @@
+# Segredos — NUNCA versionar
+.env
+.env.local
+*.pem
+sessions/
+state/
+storage_state.json
+
+# Saídas de execução
+runs/
+out/
+*.log
+screenshots/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# Node / SO
+node_modules/
+.DS_Store

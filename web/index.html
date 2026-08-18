@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Análise de Sentimento — Instagram</title>
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+</head>
+<body>
+
+<!-- ================= TELA 1: ENTRADA ================= -->
+<section id="tela-inicial" class="tela ativa">
+  <div class="entrada">
+    <header class="marca">
+      <div class="marca-icone">IG</div>
+      <div>
+        <h1>Análise de Sentimento de Perfis</h1>
+        <p class="sub">Leitura humana de comentários e reações, com laudo executivo.</p>
+      </div>
+    </header>
+
+    <form id="form-analise" class="cartao">
+      <label class="campo">
+        <span class="rotulo">URL do perfil no Instagram</span>
+        <input id="url" type="text" placeholder="https://www.instagram.com/nomedoperfil/" required
+               autocomplete="off" spellcheck="false">
+        <small class="ajuda">Aceita a URL completa, o @usuário ou apenas o nome.</small>
+      </label>
+
+      <fieldset class="campo">
+        <span class="rotulo">Intervalo de análise</span>
+        <div class="atalhos" id="atalhos">
+          <button type="button" data-dias="7">7 dias</button>
+          <button type="button" data-dias="30" class="ativo">30 dias</button>
+          <button type="button" data-dias="90">90 dias</button>
+          <button type="button" data-dias="180">6 meses</button>
+        </div>
+        <div class="datas">
+          <label>De <input id="inicio" type="date" required></label>
+          <label>Até <input id="fim" type="date" required></label>
+        </div>
+      </fieldset>
+
+      <details class="avancado">
+        <summary>Opções de navegação</summary>
+        <div class="opcoes">
+          <label class="campo">
+            <span class="rotulo">Ritmo da leitura</span>
+            <select id="ritmo">
+              <option value="calmo">Calmo — mais lento, mais discreto</option>
+              <option value="normal" selected>Normal</option>
+              <option value="apressado">Apressado</option>
+            </select>
+          </label>
+          <label class="campo">
+            <span class="rotulo">Máximo de publicações</span>
+            <input id="max" type="number" min="1" max="200" value="40">
+          </label>
+          <label class="alternar">
+            <input id="visivel" type="checkbox" checked>
+            <span>Mostrar a janela do Chrome durante a leitura</span>
+          </label>
+        </div>
+      </details>
+
+      <div id="aviso-config" class="aviso oculto"></div>
+      <button type="submit" class="principal">Iniciar análise</button>
+      <p class="conduta">
+        O sistema apenas <strong>visualiza</strong>: não curte, não comenta, não segue e não salva
+        publicações. Tentativas de escrita são bloqueadas na camada de rede.
+      </p>
+    </form>
+  </div>
+</section>
+
+<!-- ================= TELA 2: PROGRESSO ================= -->
+<section id="tela-progresso" class="tela">
+  <div class="progresso-caixa cartao">
+    <h2 id="progresso-titulo">Lendo o perfil...</h2>
+    <p id="progresso-msg" class="sub">Abrindo o navegador</p>
+    <div class="barra"><div id="barra-preenchida"></div></div>
+    <div class="percentual"><span id="percentual">0</span>%</div>
+    <ul id="log" class="log"></ul>
+    <div id="erro-caixa" class="erro oculto"></div>
+    <button type="button" id="voltar" class="secundaria oculto">Voltar ao início</button>
+  </div>
+</section>
+
+<!-- ================= TELA 3: DASHBOARD ================= -->
+<section id="tela-dashboard" class="tela">
+  <div id="dashboard"></div>
+</section>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
