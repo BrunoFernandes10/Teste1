@@ -27,16 +27,27 @@ Tela inicial          Sessão humana no Chrome         Analista                P
 
 ---
 
-## Instalação
+## Começando (um comando)
 
 ```bash
-git clone <este repositório>
+git clone https://github.com/BrunoFernandes10/Teste1
 cd Teste1
+git checkout claude/instagram-sentiment-analysis-6376qx
 
+python iniciar.py
+```
+
+O `iniciar.py` faz tudo sozinho: confere o Python, instala as bibliotecas, baixa o
+navegador, pergunta suas credenciais, diagnostica o que estiver faltando e abre o
+sistema em `http://localhost:8000`. Funciona em Windows, Mac e Linux.
+
+Se preferir fazer à mão:
+
+```bash
 pip install -r requirements.txt
 python -m playwright install chromium
-
 cp .env.example .env      # preencha as credenciais
+./run.sh
 ```
 
 ### O arquivo `.env`
