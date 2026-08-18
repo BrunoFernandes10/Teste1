@@ -9,6 +9,7 @@ configuracao, pergunta o que falta e abre o sistema no navegador.
 
 from __future__ import annotations
 
+import getpass
 import os
 import shutil
 import subprocess
@@ -106,9 +107,16 @@ def instalar_navegador() -> bool:
 
 
 def perguntar(rotulo: str, atual: str = "", segredo: bool = False) -> str:
+    """Pergunta um valor. Segredos nao aparecem na tela enquanto sao digitados."""
     sufixo = f" [{'*' * 6 if segredo and atual else atual}]" if atual else ""
+    pergunta = f"      {rotulo}{sufixo}: "
     try:
-        resposta = input(f"      {rotulo}{sufixo}: ").strip()
+        if segredo:
+            # Digitacao oculta: nada de senha visivel no terminal (nem em print
+            # de tela, nem no historico de rolagem).
+            resposta = getpass.getpass(pergunta).strip()
+        else:
+            resposta = input(pergunta).strip()
     except (EOFError, KeyboardInterrupt):
         return atual
     return resposta or atual
@@ -134,7 +142,8 @@ def configurar(interativo: bool) -> dict[str, str]:
     if not interativo:
         return valores
 
-    print("\n      Deixe em branco para pular. Você pode editar o arquivo .env depois.\n")
+    print("\n      Deixe em branco para pular — dá para editar o arquivo .env depois.")
+    print("      As senhas não aparecem na tela enquanto você digita.\n")
     valores["IG_USERNAME"] = perguntar("Usuário do Instagram (sem @)", valores.get("IG_USERNAME", "")).lstrip("@")
     valores["IG_PASSWORD"] = perguntar("Senha do Instagram", valores.get("IG_PASSWORD", ""), segredo=True)
     print()
