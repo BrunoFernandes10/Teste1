@@ -16,6 +16,22 @@ except Exception:  # pragma: no cover - dotenv e conveniencia, nao requisito
 ROOT = Path(__file__).resolve().parent.parent
 
 
+def preparar_plataforma() -> None:
+    """Ajustes obrigatorios por sistema operacional.
+
+    No Windows, abrir um subprocesso (o navegador) so funciona sob o
+    ProactorEventLoop. Alguns servidores selecionam o SelectorEventLoop, e ai o
+    Playwright falha com NotImplementedError na hora de subir o Chrome.
+    """
+    if os.name != "nt":
+        return
+    import asyncio
+
+    politica = getattr(asyncio, "WindowsProactorEventLoopPolicy", None)
+    if politica and not isinstance(asyncio.get_event_loop_policy(), politica):
+        asyncio.set_event_loop_policy(politica())
+
+
 def _bool(name: str, default: bool) -> bool:
     raw = os.getenv(name)
     if raw is None or raw == "":

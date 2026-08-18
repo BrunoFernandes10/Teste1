@@ -14,9 +14,11 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from .config import ROOT, Settings
+from .config import ROOT, Settings, preparar_plataforma
 from .pipeline import executar_analise, parse_periodo, salvar_relatorio
 from .collector.instagram import LoginRequired, parse_username
+
+preparar_plataforma()
 
 WEB_DIR = ROOT / "web"
 

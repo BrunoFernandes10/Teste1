@@ -156,7 +156,9 @@ class InstagramReader:
             "--no-first-run",
             "--no-default-browser-check",
         ]
-        if os.geteuid() == 0:  # contêiner rodando como root exige isso
+        # --no-sandbox só é necessário em Linux rodando como root (contêineres).
+        # os.geteuid não existe no Windows, por isso a checagem é defensiva.
+        if os.name == "posix" and getattr(os, "geteuid", lambda: -1)() == 0:
             args += ["--no-sandbox", "--disable-dev-shm-usage"]
 
         # Ordem de preferencia: executavel indicado pelo usuario, Chrome

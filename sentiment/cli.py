@@ -11,7 +11,7 @@ import json
 import sys
 from datetime import datetime, timezone
 
-from .config import ROOT, Settings
+from .config import ROOT, Settings, preparar_plataforma
 from .pipeline import (
     analisar_captura,
     carregar_captura,
@@ -20,6 +20,8 @@ from .pipeline import (
     salvar_relatorio,
 )
 
+
+preparar_plataforma()
 
 def _progresso(etapa: str, mensagem: str, percentual: int) -> None:
     barra = "█" * (percentual // 4) + "·" * (25 - percentual // 4)
