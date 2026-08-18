@@ -160,6 +160,23 @@ def listar() -> dict:
     return {"analises": [j.resumo() for j in sorted(JOBS.values(), key=lambda j: j.criado_em, reverse=True)]}
 
 
+@app.post("/api/demonstracao")
+def demonstracao() -> dict:
+    """Gera um relatorio com dados simulados — util para conhecer o painel
+    antes de configurar credenciais."""
+    import sys
+
+    from .models import Capture
+    from .pipeline import analisar_captura
+
+    sys.path.insert(0, str(ROOT / "tests" / "mock_instagram"))
+    from data import gerar  # type: ignore
+
+    relatorio = analisar_captura(Capture.from_dict(gerar()), Settings())
+    relatorio["demonstracao"] = True
+    return relatorio
+
+
 @app.get("/")
 def home() -> FileResponse:
     return FileResponse(WEB_DIR / "index.html")

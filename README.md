@@ -55,6 +55,15 @@ cp .env.example .env      # preencha as credenciais
 
 ## Uso
 
+**Antes de tudo — veja o painel funcionando**, sem login e sem chave de API:
+
+```bash
+python -m sentiment.cli --demo
+```
+
+Ou, pela interface, clique em **"Ver o painel com dados de exemplo"** na tela inicial.
+Serve para conhecer o formato do laudo antes de configurar qualquer credencial.
+
 **Interface web** (recomendado):
 
 ```bash

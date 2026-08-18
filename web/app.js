@@ -83,6 +83,22 @@ $('#form-analise').addEventListener('submit', async (ev) => {
   }
 });
 
+$('#btn-demo').addEventListener('click', async (ev) => {
+  const botao = ev.target;
+  botao.disabled = true;
+  botao.textContent = 'Gerando exemplo...';
+  try {
+    const relatorio = await (await fetch('/api/demonstracao', { method: 'POST' })).json();
+    renderizarPainel(relatorio);
+    mostrarTela('tela-dashboard');
+  } catch {
+    alert('Não foi possível gerar o exemplo.');
+  } finally {
+    botao.disabled = false;
+    botao.textContent = 'Ver o painel com dados de exemplo';
+  }
+});
+
 /* ------------------------- acompanhamento ------------------------- */
 $('#voltar').addEventListener('click', () => mostrarTela('tela-inicial'));
 

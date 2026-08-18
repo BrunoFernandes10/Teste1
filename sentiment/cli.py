@@ -11,7 +11,7 @@ import json
 import sys
 from datetime import datetime, timezone
 
-from .config import Settings
+from .config import ROOT, Settings
 from .pipeline import (
     analisar_captura,
     carregar_captura,
@@ -85,6 +85,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--fim", help="Data final AAAA-MM-DD")
     parser.add_argument("--dias", type=int, help="Atalho: ultimos N dias")
     parser.add_argument("--captura", help="Analisa um arquivo de captura ja existente")
+    parser.add_argument("--demo", action="store_true",
+                        help="Roda com dados simulados, sem login e sem API — so para ver o painel")
     parser.add_argument("--json", action="store_true", help="Imprime o relatorio em JSON")
     parser.add_argument("--ritmo", choices=["calmo", "normal", "apressado"])
     args = parser.parse_args(argv)
@@ -93,12 +95,21 @@ def main(argv: list[str] | None = None) -> int:
     if args.ritmo:
         settings.pace = args.ritmo
 
-    if args.captura:
+    if args.demo:
+        from .models import Capture
+        import sys as _sys
+        _sys.path.insert(0, str(ROOT / "tests" / "mock_instagram"))
+        from data import gerar  # type: ignore
+
+        print("Modo demonstracao: dados simulados, nenhum acesso ao Instagram.\n", file=sys.stderr)
+        capture = Capture.from_dict(gerar())
+        relatorio = analisar_captura(capture, settings, progress=_progresso)
+    elif args.captura:
         capture = carregar_captura(args.captura)
         relatorio = analisar_captura(capture, settings, progress=_progresso)
     else:
         if not args.url:
-            parser.error("informe --url ou --captura")
+            parser.error("informe --url, --captura ou --demo")
         if args.dias:
             inicio, fim = periodo_relativo(args.dias)
             inicio_s, fim_s = inicio.date().isoformat(), fim.date().isoformat()
