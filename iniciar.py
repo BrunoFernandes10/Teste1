@@ -205,8 +205,9 @@ def configurar(interativo: bool) -> dict[str, str]:
     perfil = perfil_chrome_padrao()
     if perfil:
         print()
-        print("      Encontrei o seu Chrome. Usar a sessão que já está logada nele")
-        print("      evita a tela de login por completo (o Chrome precisa estar fechado).")
+        print("      Encontrei o seu Chrome. Se você já está logado no Instagram nele,")
+        print("      o sistema aproveita essa sessão e nem passa pela tela de login.")
+        print("      Ele trabalha sobre uma cópia, então pode deixar o Chrome aberto.")
         usar = perguntar("Usar o seu Chrome? (s/n)", "s" if valores.get("CHROME_PROFILE") else "n")
         valores["CHROME_PROFILE"] = perfil if usar.lower().startswith("s") else ""
 
@@ -237,7 +238,7 @@ def diagnostico(valores: dict[str, str]) -> None:
         print("      Preencha IG_USERNAME e IG_PASSWORD no arquivo .env")
 
     if valores.get("CHROME_PROFILE"):
-        ok("vai usar a sessão do seu Chrome — feche o Chrome antes de analisar")
+        ok("vai usar a sessão do seu Chrome (pode deixá-lo aberto)")
     elif valores.get("IG_SESSIONID"):
         ok("vai usar o cookie de sessão informado")
 

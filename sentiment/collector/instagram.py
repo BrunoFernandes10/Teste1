@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import os
 import re
+import shutil
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -189,12 +190,20 @@ class InstagramReader:
         recusar. O preco e que o Chrome precisa estar fechado, porque o perfil
         fica travado por quem o abriu primeiro.
         """
-        caminho = Path(self.settings.chrome_profile).expanduser()
-        if not caminho.exists():
+        origem = Path(self.settings.chrome_profile).expanduser()
+        if not origem.exists():
             raise CollectionError(
-                f"Perfil do Chrome nao encontrado em: {caminho}\n"
+                f"Perfil do Chrome nao encontrado em: {origem}\n"
                 "Confira o valor de CHROME_PROFILE no arquivo .env."
             )
+
+        # Trabalhamos sobre uma COPIA do perfil, nunca sobre o original.
+        # O Chrome tranca a pasta de quem a abriu primeiro: usar o original
+        # exigiria fechar o Chrome — impossivel, ja que o painel do sistema
+        # roda dentro dele. A copia tambem garante que nada do navegador do
+        # dia a dia seja alterado por esta sessao.
+        caminho = self._copiar_perfil(origem)
+
         args = ["--disable-blink-features=AutomationControlled", "--no-first-run"]
         if self.settings.chrome_profile_name:
             args.append(f"--profile-directory={self.settings.chrome_profile_name}")
@@ -209,15 +218,63 @@ class InstagramReader:
             )
         except Exception as exc:
             raise CollectionError(
-                "Nao consegui abrir o seu perfil do Chrome. Feche o Chrome por completo "
-                "(inclusive o icone ao lado do relogio) e tente de novo.\n"
+                "Nao consegui abrir a copia do seu perfil do Chrome.\n"
                 f"Detalhe: {str(exc).splitlines()[0]}"
             ) from exc
-        self.notes.append("Sessao aproveitada do perfil real do Chrome.")
+        self.notes.append("Sessao aproveitada de uma copia do perfil do Chrome.")
         await contexto.add_init_script(
             "Object.defineProperty(navigator,'webdriver',{get:()=>undefined});"
         )
         return contexto
+
+    def _copiar_perfil(self, origem: Path) -> Path:
+        """Copia o minimo do perfil do Chrome para uma pasta propria.
+
+        Interessa apenas o que carrega a sessao: a chave de criptografia em
+        "Local State" e os cookies do perfil. Copiar a pasta inteira levaria
+        gigabytes de cache e historico sem necessidade.
+        """
+        destino = self.settings.session_dir / "chrome-copia"
+        perfil = self.settings.chrome_profile_name or "Default"
+        destino_perfil = destino / perfil
+        destino_perfil.mkdir(parents=True, exist_ok=True)
+
+        # A chave que decifra os cookies fica na raiz e e presa ao usuario do
+        # Windows — por isso a copia so funciona na mesma conta, que e o caso.
+        for nome in ("Local State",):
+            fonte = origem / nome
+            if fonte.exists():
+                shutil.copy2(fonte, destino / nome)
+
+        alvos = [
+            Path("Network") / "Cookies",
+            Path("Cookies"),          # Chrome antigo guardava fora de Network
+            Path("Preferences"),
+            Path("Local Storage") / "leveldb",
+        ]
+        copiados = 0
+        for alvo in alvos:
+            fonte = origem / perfil / alvo
+            if not fonte.exists():
+                continue
+            destino_item = destino_perfil / alvo
+            destino_item.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                if fonte.is_dir():
+                    shutil.copytree(fonte, destino_item, dirs_exist_ok=True)
+                else:
+                    shutil.copy2(fonte, destino_item)
+                copiados += 1
+            except Exception:
+                continue  # arquivo em uso pelo Chrome: seguimos com o resto
+
+        if not copiados:
+            raise CollectionError(
+                f"Nao encontrei os dados de sessao em: {origem / perfil}\n"
+                "Confira CHROME_PROFILE e CHROME_PROFILE_NAME no arquivo .env."
+            )
+        self.notes.append(f"Copia do perfil preparada ({copiados} item(ns)).")
+        return destino
 
     async def _injetar_sessao(self, context) -> None:
         """Instala o cookie de sessao copiado de um navegador ja autenticado."""

@@ -101,8 +101,13 @@ Três saídas, da mais simples para a mais técnica:
 
 **1. Usar o seu próprio Chrome** (recomendado). Se você já está logado no Chrome do
 dia a dia, o sistema aproveita essa sessão e não há login a fazer. O `iniciar.py`
-detecta o caminho sozinho e pergunta. O Chrome precisa estar **completamente fechado**
-durante a análise — inclusive o ícone ao lado do relógio.
+detecta o caminho sozinho e pergunta.
+
+O sistema copia apenas os cookies e a chave que os decifra para uma pasta própria,
+e trabalha sobre essa cópia. Isso importa por dois motivos: o Chrome tranca a pasta
+de quem a abriu primeiro (e o painel do sistema roda dentro do Chrome, então fechá-lo
+não é opção), e nada do seu navegador do dia a dia é alterado. Cache e histórico não
+são copiados.
 
 ```
 CHROME_PROFILE=C:\Users\SEU_USUARIO\AppData\Local\Google\Chrome\User Data
