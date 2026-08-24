@@ -98,3 +98,33 @@ Exigencias:
   diga isso tambem em vez de inventar preocupacao.
 - Baseie-se nas evidencias fornecidas; nunca cite um numero que nao recebeu."""
 )
+
+
+# O analista precisa saber de que mundo vem o comentario. Sem isso ele nomeia
+# temas genericos e o laudo perde a linguagem de quem vai ler.
+CONTEXTO_DE_SEGMENTO = {
+    "servicos": (
+        " O perfil e de uma empresa de servico ao consumidor. Temas tipicos: pontualidade, "
+        "atendimento, preco, conforto, seguranca, reserva e pagamento."
+    ),
+    "ecommerce": (
+        " O perfil e de comercio eletronico. Temas tipicos: entrega e prazo, frete, estorno e "
+        "reembolso, qualidade do produto, vendedor, aplicativo, cupom. Reclamacao de pedido nao "
+        "entregue, produto falsificado e conta bloqueada sao risco, nao apenas insatisfacao."
+    ),
+    "politica": (
+        " O perfil e de uma pessoa com mandato ou candidatura. Temas tipicos: saude, educacao, "
+        "seguranca publica, emprego, obras, corrupcao e transparencia, promessas, atuacao no "
+        "mandato, presenca na comunidade.\n"
+        "Cuidados especificos deste contexto:\n"
+        "- Apoio de militancia ('estamos juntos', 'meu voto e seu') e positivo, porem raso: use "
+        "  intensidade alta e confianca menor, pois nao avalia entrega.\n"
+        "- Cobranca ('cade a obra que prometeu') e NEGATIVA mesmo sem xingamento.\n"
+        "- Ataque de adversario politico e negativo, mas registre se parece coordenado (mesma "
+        "  frase repetida por perfis diferentes) marcando o risco 'ataque coordenado'.\n"
+        "- Ameaca a integridade fisica e o risco mais grave que existe aqui: marque sempre.\n"
+        "- Discordancia de posicionamento NAO e risco. Critica e parte do jogo democratico; "
+        "  risco e ameaca, acusacao de crime, desinformacao e discurso de odio."
+    ),
+    "generico": "",
+}

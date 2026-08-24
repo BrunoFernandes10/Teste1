@@ -305,7 +305,8 @@ def people_blocks(
     return {"fas": fas, "detratores": detratores}
 
 
-def post_theme_ranking(posts: list[Post], insights: dict[str, CommentInsight], limit: int = 5) -> list[dict]:
+def post_theme_ranking(posts: list[Post], insights: dict[str, CommentInsight],
+                       limit: int = 5, segmento: str = "generico") -> list[dict]:
     """Rank dos temas das PUBLICACOES, com o sentimento que cada um provocou."""
     temas: dict[str, dict] = defaultdict(
         lambda: {"publicacoes": 0, "positivo": 0, "neutro": 0, "negativo": 0, "urls": [], "reacoes": 0}
@@ -313,7 +314,7 @@ def post_theme_ranking(posts: list[Post], insights: dict[str, CommentInsight], l
     for post in posts:
         # Uma publicacao pertence ao seu tema principal, para o rank somar
         # exatamente o numero de publicacoes lidas.
-        tema = detectar_temas(post.caption or "")[0]
+        tema = detectar_temas(post.caption or "", segmento)[0]
         dados = temas[tema]
         dados["publicacoes"] += 1
         dados["reacoes"] += post.like_count
@@ -424,7 +425,8 @@ def brand_metrics(capture: Capture, insights: dict[str, CommentInsight]) -> dict
     }
 
 
-def build_metrics(capture: Capture, insights: dict[str, CommentInsight]) -> dict:
+def build_metrics(capture: Capture, insights: dict[str, CommentInsight],
+                  segmento: str = "generico") -> dict:
     """Reune todos os blocos numericos do dashboard.
 
     As respostas da propria marca sao retiradas do balanco: elas nao sao
@@ -465,6 +467,6 @@ def build_metrics(capture: Capture, insights: dict[str, CommentInsight]) -> dict
         "publicacoes_criticas": hotspot_posts(posts, insights),
         "fas": pessoas["fas"],
         "detratores": pessoas["detratores"],
-        "ranking_temas": post_theme_ranking(posts, insights),
+        "ranking_temas": post_theme_ranking(posts, insights, segmento=segmento),
         "publicacoes_analisadas": len(posts),
     }

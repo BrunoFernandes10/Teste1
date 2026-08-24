@@ -61,6 +61,8 @@ class Settings:
     anthropic_api_key: str = field(default_factory=lambda: os.getenv("ANTHROPIC_API_KEY", ""))
     analyst_model: str = field(default_factory=lambda: os.getenv("ANALYST_MODEL", "claude-opus-5"))
 
+    # Segmento do perfil analisado: decide o vocabulario de temas e riscos.
+    segmento: str = field(default_factory=lambda: os.getenv("SEGMENTO", "generico").strip().lower())
     pace: str = field(default_factory=lambda: os.getenv("HUMAN_PACE", "normal").strip().lower())
     # Entrar a mao na janela do Chrome em vez de preencher o formulario. O
     # Instagram costuma recusar login automatizado mesmo com a senha correta;

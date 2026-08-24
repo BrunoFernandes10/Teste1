@@ -14,7 +14,7 @@ from typing import Optional
 from ..config import Settings
 from ..models import Capture, Comment, CommentInsight, clamp, normalize_sentiment
 from . import lexicon
-from .prompts import CLASSIFICACAO, SINTESE
+from .prompts import CLASSIFICACAO, CONTEXTO_DE_SEGMENTO, SINTESE
 
 LOTE = 40  # comentarios por chamada: cabe no contexto e mantem a latencia baixa
 
@@ -92,7 +92,7 @@ class Analyst:
             resultado = self._classify_batch(lote) if self.client else None
             if resultado is None:
                 for comment in lote:  # rede de seguranca
-                    insights[comment.id] = lexicon.analisar_texto(comment.id, comment.text)
+                    insights[comment.id] = lexicon.analisar_texto(comment.id, comment.text, self.settings.segmento)
             else:
                 insights.update(resultado)
         return insights
@@ -102,9 +102,10 @@ class Analyst:
             {"id": c.id, "texto": c.text[:600], "curtidas": c.like_count, "resposta": c.is_reply}
             for c in lote
         ]
+        contexto = CONTEXTO_DE_SEGMENTO.get(self.settings.segmento, "")
         pedido = (
             "Classifique os comentarios abaixo, extraidos de publicacoes de um perfil "
-            "no Instagram.\n\nCOMENTARIOS:\n"
+            f"no Instagram.{contexto}\n\nCOMENTARIOS:\n"
             + json.dumps(payload, ensure_ascii=False, indent=1)
         )
         data = self._ask(CLASSIFICACAO, pedido)
@@ -134,7 +135,7 @@ class Analyst:
         # Nenhum comentario pode ficar sem classificacao.
         for comment in lote:
             if comment.id not in insights:
-                insights[comment.id] = lexicon.analisar_texto(comment.id, comment.text)
+                insights[comment.id] = lexicon.analisar_texto(comment.id, comment.text, self.settings.segmento)
         return insights
 
     # -- sintese ----------------------------------------------------------

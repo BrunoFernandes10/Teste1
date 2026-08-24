@@ -61,6 +61,7 @@ $('#form-analise').addEventListener('submit', async (ev) => {
     url: $('#url').value.trim(),
     inicio: $('#inicio').value,
     fim: $('#fim').value,
+    segmento: $('#segmento').value,
     ritmo: $('#ritmo').value,
     max_publicacoes: Number($('#max').value) || 40,
     mostrar_navegador: $('#visivel').checked,
@@ -421,6 +422,7 @@ function renderizarPainel(r) {
   blocos.push(`<div class="rodape">
     <strong>Procedência dos dados.</strong>
     Motor de análise: <code>${esc(q.motor_de_analise)}</code> ·
+    vocabulário: <code>${esc(q.segmento || 'generico')}</code> ·
     ${num(q.comentarios_classificados)} comentários classificados ·
     ${num(q.spam_descartado)} descartados como spam ·
     idiomas: ${esc(Object.entries(q.idiomas || {}).map(([k, v]) => `${k} (${v})`).join(', ') || '—')}.<br>

@@ -149,6 +149,26 @@ O sistema também não copia mídia: lê apenas o texto público já exibido na 
 
 ## Como o sentimento é medido
 
+### Vocabulário por ramo
+
+O que o laudo consegue nomear depende do vocabulário. Uma lista pensada para
+transporte não enxerga "estorno" nem "saneamento": tudo cai em "assunto geral" e a
+análise perde utilidade. Por isso o ramo é escolhido na tela inicial.
+
+| Ramo | O que passa a enxergar |
+|---|---|
+| Genérico | atendimento, preço, qualidade, comunicação, dúvidas |
+| Serviços | pontualidade, conforto, motorista, reserva, segurança |
+| E-commerce | entrega e prazo, frete, estorno, produto falsificado, conta bloqueada |
+| Política | saúde, educação, segurança pública, obras, corrupção, promessas, mandato |
+
+Cada ramo traz também a sua tabela de riscos. Em política, ameaça à integridade
+física e desinformação pesam mais do que qualquer reclamação; discordância de
+posicionamento **não** é tratada como risco — crítica é parte do jogo democrático.
+
+Com a chave da Anthropic o vocabulário importa menos: o analista extrai os temas
+do próprio texto em vez de procurar palavras de uma lista.
+
 ### Comentários
 Cada comentário recebe sentimento, confiança, intensidade, temas, adjetivos e
 sinalização de risco. O analista é instruído a tratar ironia pelo sentido real,

@@ -27,6 +27,7 @@ class PedidoAnalise(BaseModel):
     url: str = Field(..., description="URL do perfil no Instagram")
     inicio: str = Field(..., description="Data inicial AAAA-MM-DD")
     fim: str = Field(..., description="Data final AAAA-MM-DD")
+    segmento: Optional[str] = Field(None, description="generico | servicos | ecommerce | politica")
     ritmo: Optional[str] = Field(None, description="calmo | normal | apressado")
     max_publicacoes: Optional[int] = None
     mostrar_navegador: Optional[bool] = None
@@ -108,6 +109,8 @@ async def criar_analise(pedido: PedidoAnalise) -> JSONResponse:
 
 async def _executar(job: Job, pedido: PedidoAnalise) -> None:
     settings = Settings()
+    if pedido.segmento:
+        settings.segmento = pedido.segmento
     if pedido.ritmo:
         settings.pace = pedido.ritmo
     if pedido.max_publicacoes:

@@ -55,7 +55,7 @@ def analisar_captura(
     insights = analyst.classify(comentarios, on_progress=lote_feito)
 
     say("analisando", "Consolidando metricas...", 96)
-    metrics = build_metrics(capture, insights)
+    metrics = build_metrics(capture, insights, settings.segmento)
 
     say("analisando", "Redigindo a leitura executiva...", 98)
     narrativa = analyst.synthesize(capture, metrics)
@@ -79,6 +79,7 @@ def analisar_captura(
         **metrics,
         "qualidade_dos_dados": {
             "motor_de_analise": analyst.engine,
+            "segmento": settings.segmento,
             "comentarios_classificados": len(insights),
             "spam_descartado": sum(1 for i in insights.values() if i.is_spam),
             "idiomas": idiomas,
