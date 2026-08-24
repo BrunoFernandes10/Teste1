@@ -72,6 +72,22 @@ async def principal() -> int:
     fim = datetime.now(timezone.utc)
     inicio = fim - timedelta(days=90)
 
+    # Quanto o fixture coloca dentro desta janela — nao um numero cravado, que
+    # envelheceria junto com o calendario.
+    esperado_posts = sum(
+        1 for p in mock.POSTS
+        if inicio <= datetime.fromisoformat(p["created_at"]) <= fim
+    )
+    esperado_comentarios = sum(
+        len(p["comments"]) for p in mock.POSTS
+        if inicio <= datetime.fromisoformat(p["created_at"]) <= fim
+    )
+    respostas_da_marca = sum(
+        1 for p in mock.POSTS for c in p["comments"]
+        if c["author"] == mock.PERFIL["username"]
+        and inicio <= datetime.fromisoformat(p["created_at"]) <= fim
+    )
+
     etapas: list[str] = []
     resultado = await collect(
         settings, f"{BASE}/flashtransfer.orlando/", inicio, fim,
@@ -92,8 +108,10 @@ async def principal() -> int:
         _ok("login" in tentativas, "o sistema fez login de verdade no formulario"),
         _ok(captura.profile.username == "flashtransfer.orlando", "perfil identificado"),
         _ok(captura.profile.followers == 18420, f"dados do perfil lidos (seguidores={captura.profile.followers})"),
-        _ok(len(captura.posts) == 12, f"12 publicacoes do periodo lidas (obtidas: {len(captura.posts)})"),
-        _ok(total_comentarios > 200, f"comentarios lidos: {total_comentarios}"),
+        _ok(len(captura.posts) == esperado_posts,
+            f"todas as {esperado_posts} publicacoes do periodo foram lidas (obtidas: {len(captura.posts)})"),
+        _ok(total_comentarios == esperado_comentarios,
+            f"todos os {esperado_comentarios} comentarios foram lidos (obtidos: {total_comentarios})"),
         _ok(not orfaos, f"todo comentario ligado a sua publicacao (orfaos: {len(orfaos)})"),
         _ok(all(p.created_at for p in captura.posts), "todas as publicacoes tem data"),
         _ok(all(p.url.startswith("https://www.instagram.com/") for p in captura.posts),
@@ -147,7 +165,13 @@ async def principal() -> int:
     checagens += [
         _ok(0 <= p["nota"] <= 100, f"nota dentro de 0-100: {p['nota']}"),
         _ok(abs(soma - 100) < 0.5, f"percentuais de comentarios somam 100 ({soma})"),
-        _ok(c["total"] == total_comentarios, f"todo comentario classificado ({c['total']})"),
+        # As respostas da propria marca saem do balanco de sentimento de
+        # proposito: nao sao opiniao do publico.
+        _ok(c["total"] == total_comentarios - respostas_da_marca,
+            f"todo comentario do publico classificado ({c['total']} = "
+            f"{total_comentarios} - {respostas_da_marca} respostas da marca)"),
+        _ok(relatorio["atendimento_da_marca"]["respostas_da_marca"] == respostas_da_marca,
+            f"respostas da marca contabilizadas a parte ({respostas_da_marca})"),
         _ok(len(relatorio["ranking_temas"]) > 0, "ranking de temas gerado"),
         _ok(len(relatorio["riscos"]) > 0, f"riscos detectados: {len(relatorio['riscos'])}"),
     ]

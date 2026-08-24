@@ -12,7 +12,12 @@ import random
 from datetime import datetime, timedelta, timezone
 
 SEED = 20260818
-HOJE = datetime(2026, 8, 18, 12, 0, tzinfo=timezone.utc)
+
+# Ancorado no presente, nao numa data fixa: assim as publicacoes simuladas
+# continuam caindo dentro de qualquer janela relativa ("ultimos 90 dias") por
+# mais tempo que passe, e as datas do modo demonstracao nunca parecem velhas.
+# O SEED continua fixo, entao os textos e volumes seguem reproduziveis.
+HOJE = datetime.now(timezone.utc).replace(hour=12, minute=0, second=0, microsecond=0)
 
 PERFIL = {
     "username": "flashtransfer.orlando",
@@ -110,6 +115,10 @@ def gerar() -> dict:
     """Monta a captura completa, deterministica pelo SEED."""
     rng = random.Random(SEED)
     posts = []
+    # Contador sequencial em vez de id sorteado: dois comentarios com o mesmo
+    # id fariam o coletor deduplicar (corretamente, pois id do Instagram e
+    # unico) e o fixture pareceria perder comentario.
+    proximo_id = iter(range(900_000, 999_999))
 
     for indice, (dias, legenda, curtidas) in enumerate(PUBLICACOES):
         criado = HOJE - timedelta(days=dias, hours=rng.randint(0, 10))
@@ -143,7 +152,7 @@ def gerar() -> dict:
                 texto = rng.choice(NEGATIVOS)
 
             comentarios.append({
-                "id": f"9{indice:02d}{ordem:03d}",
+                "id": str(next(proximo_id)),
                 "post_id": post_id,
                 "author": autor,
                 "text": texto,
@@ -157,7 +166,7 @@ def gerar() -> dict:
         for _ in range(rng.randint(1, 3)):
             alvo = rng.choice(comentarios)
             comentarios.append({
-                "id": f"9{indice:02d}9{rng.randint(10, 99)}",
+                "id": str(next(proximo_id)),
                 "post_id": post_id,
                 "author": PERFIL["username"],
                 "text": rng.choice(RESPOSTAS_MARCA),

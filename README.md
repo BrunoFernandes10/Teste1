@@ -203,10 +203,17 @@ tests/
 
 ```bash
 pip install python-multipart          # usado só pelo Instagram simulado
-python tests/test_e2e.py
+
+python tests/test_e2e.py       # 18 verificações — navegador real
+python tests/test_analista.py  # 19 verificações — agente de IA e seus modos de falha
 ```
 
-O teste sobe um Instagram simulado que reproduz o fluxo real (banner de cookies,
+`test_analista.py` exercita o agente com um cliente simulado: resposta bem
+formada, JSON corrompido, resposta parcial, exceção da API e falha na síntese.
+Em todos os casos o relatório precisa sair completo — um painel que some porque
+a API oscilou não serve para operação.
+
+`test_e2e.py` sobe um Instagram simulado que reproduz o fluxo real (banner de cookies,
 formulário de login, grade paginada por rolagem, modal aberto por clique e fechado
 com Escape, e as mesmas formas de JSON da API), roda o coletor Playwright de verdade
 contra ele e verifica login, coleta, vínculo comentário↔publicação, a trava de
