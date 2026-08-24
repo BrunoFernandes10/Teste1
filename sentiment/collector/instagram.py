@@ -420,9 +420,21 @@ class InstagramReader:
             return
 
         visivel = not self.settings.headless
+        marca_de_falha = self.settings.session_dir / f"{self.settings.ig_username or 'anon'}.sem-auto"
 
-        # Pedido explicito de entrar a mao.
-        if self.settings.login_manual and visivel:
+        # Situacoes em que preencher o formulario e so perder tempo e chamar
+        # atencao: o Instagram recusa login automatizado, e cada tentativa
+        # recusada aumenta a suspeita sobre a conta.
+        motivo = None
+        if self.settings.login_manual:
+            motivo = "configurado para entrar à mão"
+        elif self.settings.chrome_profile or self.settings.ig_sessionid:
+            motivo = "a sessão configurada não estava mais válida"
+        elif marca_de_falha.exists():
+            motivo = "o login automático já foi recusado antes nesta conta"
+
+        if motivo and visivel:
+            self.say("login", f"Entre na janela do Chrome — {motivo}.", 9)
             return await self._login_manual(page, context, state_file)
 
         if not self.settings.ig_username or not self.settings.ig_password:
@@ -442,6 +454,10 @@ class InstagramReader:
             # Qualquer imprevisto no formulario: com a janela aberta na frente
             # da pessoa, insistir na automacao e pior do que pedir ajuda.
             arquivo = await self._diagnostico(page, "falha-no-login-automatico")
+            try:  # nao repetir a tentativa recusada na proxima execucao
+                marca_de_falha.write_text("o login automático foi recusado", encoding="utf-8")
+            except Exception:
+                pass
             if visivel:
                 self.notes.append(f"Login automático falhou ({type(exc).__name__}); concluído à mão.")
                 self.say("login", "O login automático não passou — assuma na janela do Chrome.", 9)
@@ -520,6 +536,11 @@ class InstagramReader:
                 )
         try:
             await context.storage_state(path=str(state_file))
+        except Exception:
+            pass
+        # Deu certo: a marca de recusa nao vale mais.
+        try:
+            (self.settings.session_dir / f"{self.settings.ig_username or 'anon'}.sem-auto").unlink(missing_ok=True)
         except Exception:
             pass
         self.say("login", "Conta autenticada.", 15)
@@ -619,7 +640,7 @@ class InstagramReader:
                         await context.storage_state(path=str(state_file))
                     except Exception:
                         pass
-                    self.notes.append("Login concluido manualmente na janela do navegador.")
+                    self.notes.append("Login concluído manualmente na janela do navegador.")
                     self.say("login", "Login concluído. Seguindo com a leitura.", 15)
                     return
             except Exception:
