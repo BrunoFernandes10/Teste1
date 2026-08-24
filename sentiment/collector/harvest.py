@@ -82,6 +82,15 @@ def is_comment_node(node: dict) -> bool:
     return bool(_first(node, "pk", "id"))
 
 
+def _owner_username(node: dict) -> str:
+    """Quem publicou. Essencial para nao misturar o feed com o perfil alvo."""
+    for chave in ("user", "owner"):
+        valor = node.get(chave)
+        if isinstance(valor, dict) and valor.get("username"):
+            return str(valor["username"]).lstrip("@")
+    return ""
+
+
 def parse_media(node: dict) -> Post:
     shortcode = str(_first(node, "code", "shortcode", default=""))
     media_type = node.get("media_type")
@@ -103,6 +112,7 @@ def parse_media(node: dict) -> Post:
         comment_count=_count(node, "comment_count", "edge_media_to_comment", "edge_media_preview_comment"),
         media_type=kind,
         is_pinned=bool(node.get("timeline_pinned_user_ids") or node.get("is_pinned")),
+        owner=_owner_username(node),
     )
 
 
@@ -165,6 +175,7 @@ class Harvester:
         existing.caption = existing.caption or post.caption
         existing.created_at = existing.created_at or post.created_at
         existing.is_pinned = existing.is_pinned or post.is_pinned
+        existing.owner = existing.owner or post.owner
 
     # -- saida ------------------------------------------------------------
     def attach_comments(self) -> list[Post]:

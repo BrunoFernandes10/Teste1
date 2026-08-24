@@ -693,7 +693,7 @@ class InstagramReader:
             )
 
         await self._scroll_grid(page, start)
-        candidates = self._posts_in_window(start, end)
+        candidates = self._posts_in_window(start, end, username)
         self.say(
             "perfil",
             f"{len(candidates)} publicacao(oes) dentro do periodo. Comecando a leitura.",
@@ -748,12 +748,28 @@ class InstagramReader:
             if total >= self.settings.max_posts * 3:
                 break
 
-    def _posts_in_window(self, start: datetime, end: datetime) -> list[Post]:
-        selected = [
-            post
-            for post in self.harvester.posts.values()
-            if post.created_at and start <= post.created_at <= end
-        ]
+    def _posts_in_window(self, start: datetime, end: datetime, username: str) -> list[Post]:
+        """Publicacoes do perfil pedido dentro do periodo.
+
+        O filtro por dono e indispensavel: antes de chegar ao perfil, a sessao
+        passa pela pagina inicial, e o feed de quem esta logado traz
+        publicacoes de contas que ele segue. Sem este filtro, elas entram na
+        analise e o laudo passa a descrever outro perfil.
+        """
+        alvo = (username or "").lower().lstrip("@")
+        selected = []
+        descartadas = 0
+        for post in self.harvester.posts.values():
+            if not post.created_at or not (start <= post.created_at <= end):
+                continue
+            if post.owner and post.owner.lower() != alvo:
+                descartadas += 1
+                continue
+            selected.append(post)
+        if descartadas:
+            self.notes.append(
+                f"{descartadas} publicação(ões) de outros perfis (vistas no feed) foram descartadas."
+            )
         selected.sort(key=lambda p: p.created_at, reverse=True)
         return selected
 

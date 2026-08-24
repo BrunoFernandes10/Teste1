@@ -90,6 +90,7 @@ class Post:
     comment_count: int = 0
     media_type: str = "imagem"
     is_pinned: bool = False
+    owner: str = ""          # quem publicou — separa o perfil analisado do feed
     comments: list[Comment] = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -112,6 +113,7 @@ class Post:
             "comment_count": self.comment_count,
             "media_type": self.media_type,
             "is_pinned": self.is_pinned,
+            "owner": self.owner,
             "comments": [c.to_dict() for c in self.comments],
         }
 
@@ -127,6 +129,7 @@ class Post:
             comment_count=int(data.get("comment_count") or 0),
             media_type=str(data.get("media_type") or "imagem"),
             is_pinned=bool(data.get("is_pinned")),
+            owner=str(data.get("owner") or "").lstrip("@"),
             comments=[Comment.from_dict(c) for c in data.get("comments", [])],
         )
 
