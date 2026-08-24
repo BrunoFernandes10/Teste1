@@ -6,14 +6,21 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parent.parent
+
+# Pasta pessoal, fora do projeto. O login salvo e a configuracao precisam
+# sobreviver a uma nova copia do projeto: baixar o ZIP de novo cria outra pasta
+# e, se a sessao morasse ali dentro, ela ficaria orfa a cada atualizacao — era
+# preciso entrar no Instagram outra vez, do zero, toda vez.
+PASTA_PESSOAL = Path.home() / ".analise-instagram"
+
 try:  # carregamento opcional do .env
     from dotenv import load_dotenv
 
-    load_dotenv()
+    load_dotenv(ROOT / ".env")                       # o do projeto tem prioridade
+    load_dotenv(PASTA_PESSOAL / ".env", override=False)  # a copia guardada completa
 except Exception:  # pragma: no cover - dotenv e conveniencia, nao requisito
     pass
-
-ROOT = Path(__file__).resolve().parent.parent
 
 
 def preparar_plataforma() -> None:
@@ -84,7 +91,9 @@ class Settings:
     # navegador nao esta no local padrao do sistema.
     chrome_path: str = field(default_factory=lambda: os.getenv("CHROME_PATH", "").strip())
     session_dir: Path = field(
-        default_factory=lambda: Path(os.getenv("SESSION_DIR", str(ROOT / "sessions"))).expanduser()
+        default_factory=lambda: Path(
+            os.getenv("SESSION_DIR", str(PASTA_PESSOAL / "sessions"))
+        ).expanduser()
     )
     runs_dir: Path = field(default_factory=lambda: ROOT / "runs")
 

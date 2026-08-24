@@ -21,6 +21,10 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent
 ENV = RAIZ / ".env"
+# Copia guardada fora do projeto: baixar o ZIP de novo nao apaga a configuracao
+# nem o login salvo, entao nao e preciso digitar tudo outra vez a cada versao.
+PESSOAL = Path.home() / ".analise-instagram"
+ENV_PESSOAL = PESSOAL / ".env"
 PORTA = int(os.getenv("PORTA", "8000"))
 
 VERDE, AMARELO, VERMELHO, AZUL, NEGRITO, FIM = (
@@ -181,8 +185,12 @@ def ler_env() -> dict[str, str]:
 def configurar(interativo: bool) -> dict[str, str]:
     titulo("4. Configuração")
     if not ENV.exists():
-        shutil.copy(RAIZ / ".env.example", ENV)
-        ok("arquivo .env criado")
+        if ENV_PESSOAL.exists():
+            shutil.copy(ENV_PESSOAL, ENV)
+            ok("configuração anterior recuperada — não precisa digitar de novo")
+        else:
+            shutil.copy(RAIZ / ".env.example", ENV)
+            ok("arquivo .env criado")
     valores = ler_env()
 
     if not interativo:
@@ -224,7 +232,13 @@ def configurar(interativo: bool) -> dict[str, str]:
                 linhas.append(f"{chave}={valores[chave]}")
                 continue
         linhas.append(linha)
-    ENV.write_text("\n".join(linhas) + "\n", encoding="utf-8")
+    conteudo = "\n".join(linhas) + "\n"
+    ENV.write_text(conteudo, encoding="utf-8")
+    try:  # guarda a copia pessoal para a proxima versao do projeto
+        PESSOAL.mkdir(parents=True, exist_ok=True)
+        ENV_PESSOAL.write_text(conteudo, encoding="utf-8")
+    except Exception:
+        pass
     ok("configuração salva em .env")
     return valores
 
@@ -246,6 +260,10 @@ def diagnostico(valores: dict[str, str]) -> None:
         ok("analista de IA ativo")
     else:
         aviso("sem chave da Anthropic — análise pelo motor lexical (mais raso em ironia)")
+
+    sessoes = PESSOAL / "sessions"
+    if any(sessoes.glob("*.json")) if sessoes.exists() else False:
+        ok("login do Instagram já salvo — não deve pedir de novo")
 
     try:
         import urllib.request
