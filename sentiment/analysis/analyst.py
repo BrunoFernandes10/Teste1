@@ -59,7 +59,7 @@ class Analyst:
                 self.warnings.append(f"SDK da Anthropic indisponivel ({exc}); usando motor lexical.")
         else:
             self.warnings.append(
-                "ANTHROPIC_API_KEY nao definida: analise feita pelo motor lexical offline."
+                "ANTHROPIC_API_KEY não definida: análise feita pelo motor lexical offline."
             )
 
     # -- chamada base -----------------------------------------------------
@@ -199,17 +199,24 @@ class Analyst:
         negativos = metrics["pontos_negativos"]
         riscos = metrics["riscos"]
 
-        destaque_bom = positivos[0]["assunto"] if positivos else "nenhum tema dominante"
-        destaque_ruim = negativos[0]["assunto"] if negativos else "nenhuma reclamacao recorrente"
+        # "assunto geral" e a cesta do que nao se encaixou em tema nomeado.
+        # Ela pode liderar em volume, mas nao diz nada a quem le o laudo —
+        # entao so vira manchete se nao houver mesmo nenhum tema nomeado.
+        def manchete(itens: list, vazio: str) -> str:
+            nomeados = [i["assunto"] for i in itens if i["assunto"] != "assunto geral"]
+            return nomeados[0] if nomeados else (itens[0]["assunto"] if itens else vazio)
+
+        destaque_bom = manchete(positivos, "nenhum tema dominante")
+        destaque_ruim = manchete(negativos, "nenhuma reclamação recorrente")
 
         resumo = (
-            f"Reputacao {pontuacao['rotulo']} ({pontuacao['nota']}/100) em "
-            f"{metrics['publicacoes_analisadas']} publicacoes e {comentarios['total']} comentarios. "
-            f"O que mais sustenta a marca e '{destaque_bom}'; o principal atrito e '{destaque_ruim}'. "
+            f"Reputação {pontuacao['rotulo']} ({pontuacao['nota']}/100) em "
+            f"{metrics['publicacoes_analisadas']} publicações e {comentarios['total']} comentários. "
+            f"O que mais sustenta a marca é “{destaque_bom}”; o principal atrito é “{destaque_ruim}”. "
             + (
-                f"Ha {len(riscos)} tema(s) de risco exigindo resposta."
+                f"Há {len(riscos)} tema(s) de risco exigindo resposta."
                 if riscos
-                else "Nao ha tema de risco relevante no periodo."
+                else "Não há tema de risco relevante no período."
             )
         )
 
@@ -219,16 +226,16 @@ class Analyst:
         if atendimento.get("comentarios_negativos") and cobertura < 60:
             insights.append(
                 {
-                    "titulo": "Fechar a lacuna de resposta publica",
+                    "titulo": "Fechar a lacuna de resposta pública",
                     "prioridade": "alta" if cobertura < 30 else "media",
                     "diagnostico": (
-                        f"Apenas {cobertura}% dos {atendimento['comentarios_negativos']} comentarios "
-                        "negativos receberam resposta. Reclamacao sem resposta fica como versao unica "
-                        "para quem le depois."
+                        f"Apenas {cobertura}% dos {atendimento['comentarios_negativos']} comentários "
+                        "negativos receberam resposta. Reclamação sem resposta fica como versão única "
+                        "para quem lê depois."
                     ),
                     "acao": (
-                        "Definir rotina diaria de varredura dos comentarios e responder toda reclamacao "
-                        "em ate 24h, com reconhecimento, prazo e encaminhamento para canal privado."
+                        "Definir rotina diária de varredura dos comentários e responder toda reclamação "
+                        "em até 24h, com reconhecimento, prazo e encaminhamento para canal privado."
                     ),
                     "prazo": "imediato",
                 }
@@ -237,7 +244,7 @@ class Analyst:
             {
                 "titulo": f"Conter '{r['risco']}'",
                 "prioridade": "alta" if r["nivel"] == "alto" else "media",
-                "diagnostico": f"{r['volume']} comentario(s) com esse teor no periodo.",
+                "diagnostico": f"{r['volume']} comentário(s) com esse teor no período.",
                 "acao": (
                     "Responder publicamente com reconhecimento e prazo, levar o caso para canal "
                     "privado e registrar a tratativa."
@@ -250,8 +257,8 @@ class Analyst:
         potenciais = [
             {
                 "assunto": p["assunto"],
-                "por_que_funciona": f"{p['volume']} manifestacoes positivas espontaneas.",
-                "como_usar": "Transformar em prova social: depoimento, bastidor ou serie recorrente.",
+                "por_que_funciona": f"{p['volume']} manifestações positivas espontâneas.",
+                "como_usar": "Transformar em prova social: depoimento, bastidor ou série recorrente.",
             }
             for p in positivos[:5]
         ]
@@ -259,18 +266,18 @@ class Analyst:
         return {
             "resumo": resumo,
             "leitura_do_periodo": (
-                f"Foram lidas {metrics['publicacoes_analisadas']} publicacoes entre "
+                f"Foram lidas {metrics['publicacoes_analisadas']} publicações entre "
                 f"{capture.window_start.date()} e {capture.window_end.date()}, somando "
-                f"{comentarios['total']} comentarios e {metrics['reacoes']['total']} reacoes. "
-                f"A distribuicao ficou em {comentarios['percentual_positivos']}% positivos, "
+                f"{comentarios['total']} comentários e {metrics['reacoes']['total']} reações. "
+                f"A distribuição ficou em {comentarios['percentual_positivos']}% positivos, "
                 f"{comentarios['percentual_neutros']}% neutros e "
                 f"{comentarios['percentual_negativos']}% negativos."
             ),
             "insights_de_risco": insights,
             "assuntos_potenciais": potenciais,
             "recomendacoes_gerais": [
-                "Responder todos os comentarios negativos em ate 24h.",
-                f"Produzir conteudo explorando '{destaque_bom}', o tema de melhor retorno.",
-                "Registrar as duvidas recorrentes e transformar em conteudo fixo no perfil.",
+                "Responder todos os comentários negativos em até 24h.",
+                f"Produzir conteúdo explorando “{destaque_bom}”, o tema de melhor retorno.",
+                "Registrar as dúvidas recorrentes e transformar em conteúdo fixo no perfil.",
             ],
         }

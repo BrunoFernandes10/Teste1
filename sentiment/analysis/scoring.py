@@ -96,9 +96,9 @@ def reaction_metrics(posts: list[Post], insights: dict[str, CommentInsight]) -> 
         "percentual_neutras": pct(buckets["neutro"], total),
         "percentual_ruins": pct(buckets["negativo"], total),
         "metodologia": (
-            "Curtida em comentario herda o sentimento do comentario curtido. "
-            f"Curtida em publicacao conta {int(LIKE_AFFIRMATIVE_BASE * 100)}% como aprovacao "
-            f"e {int(LIKE_CONTEXT_WEIGHT * 100)}% conforme o clima dos comentarios daquela publicacao."
+            "Curtida em comentário herda o sentimento do comentário curtido. "
+            f"Curtida em publicação conta {int(LIKE_AFFIRMATIVE_BASE * 100)}% como aprovação "
+            f"e {int(LIKE_CONTEXT_WEIGHT * 100)}% conforme o clima dos comentários daquela publicação."
         ),
     }
 
@@ -381,11 +381,11 @@ def overall_score(
     elif nota >= 70:
         rotulo = "boa"
     elif nota >= 55:
-        rotulo = "estavel"
+        rotulo = "estável"
     elif nota >= 40:
         rotulo = "em alerta"
     else:
-        rotulo = "critica"
+        rotulo = "crítica"
 
     return {
         "nota": round(nota),

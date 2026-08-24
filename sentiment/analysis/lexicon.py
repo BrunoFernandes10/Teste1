@@ -93,24 +93,24 @@ RISCOS = {
         "enganou", "scam", "fraud", "estafa", "ladrao", "mentiroso",
     ],
     "pedido de reembolso": ["reembolso", "estorno", "devolver o dinheiro", "refund", "chargeback", "meu dinheiro"],
-    "ameaca juridica": ["procon", "advogado", "processo", "processar", "denuncia", "denunciar", "lawsuit", "justica", "juizado"],
-    "seguranca fisica": ["perigoso", "inseguro", "acidente", "risco de vida", "unsafe", "dangerous", "peligroso", "quase bati"],
+    "ameaça jurídica": ["procon", "advogado", "processo", "processar", "denuncia", "denunciar", "lawsuit", "justica", "juizado"],
+    "segurança física": ["perigoso", "inseguro", "acidente", "risco de vida", "unsafe", "dangerous", "peligroso", "quase bati"],
     "falha operacional grave": ["sumiu", "abandonou", "nao apareceu", "me deixou", "cancelou em cima", "no show", "ficamos sem"],
     "atendimento hostil": ["grosseiro", "mal educado", "rude", "destratou", "grosero", "ignorou", "descaso"],
-    "higiene e conservacao": ["sujo", "fedido", "quebrado", "dirty", "sucio", "mal cuidado"],
-    "preco abusivo": ["abusivo", "caro demais", "cobranca indevida", "cobrou a mais", "overpriced", "propaganda enganosa"],
+    "higiene e conservação": ["sujo", "fedido", "quebrado", "dirty", "sucio", "mal cuidado"],
+    "preço abusivo": ["abusivo", "caro demais", "cobranca indevida", "cobrou a mais", "overpriced", "propaganda enganosa"],
     "concorrente ou spam": ["segue de volta", "compre seguidores", "ganhe dinheiro", "clique no link", "promo", "whatsapp +"],
 }
 
 SEVERIDADE = {
     "fraude ou golpe": 1.0,
-    "ameaca juridica": 0.95,
-    "seguranca fisica": 1.0,
+    "ameaça jurídica": 0.95,
+    "segurança física": 1.0,
     "pedido de reembolso": 0.7,
     "falha operacional grave": 0.8,
     "atendimento hostil": 0.65,
-    "higiene e conservacao": 0.55,
-    "preco abusivo": 0.5,
+    "higiene e conservação": 0.55,
+    "preço abusivo": 0.5,
     "concorrente ou spam": 0.2,
 }
 
@@ -118,16 +118,16 @@ SEVERIDADE = {
 TEMAS = {
     "atendimento": ["atendimento", "atendeu", "suporte", "equipe", "funcionario", "service", "staff", "atencao"],
     "pontualidade": ["pontual", "horario", "atrasou", "atraso", "esperei", "on time", "late", "puntual", "chegou na hora"],
-    "preco e custo": ["preco", "caro", "barato", "valor", "custo", "price", "cheap", "expensive", "vale a pena", "promocao"],
-    "qualidade do servico": ["qualidade", "servico", "service", "experiencia", "otimo trabalho", "capricho"],
+    "preço e custo": ["preco", "caro", "barato", "valor", "custo", "price", "cheap", "expensive", "vale a pena", "promocao"],
+    "qualidade do serviço": ["qualidade", "servico", "service", "experiencia", "otimo trabalho", "capricho"],
     "conforto e estrutura": ["confortavel", "conforto", "espaco", "limpo", "carro", "veiculo", "van", "assento", "clean"],
-    "seguranca": ["seguro", "seguranca", "safe", "confianca", "tranquilo", "perigo"],
-    "motorista e conducao": ["motorista", "driver", "conducao", "dirigiu", "guia", "condutor"],
-    "comunicacao e informacao": ["informacao", "resposta", "respondeu", "duvida", "contato", "whatsapp", "mensagem", "avisou"],
+    "segurança": ["seguro", "segurança", "safe", "confianca", "tranquilo", "perigo"],
+    "motorista e condução": ["motorista", "driver", "conducao", "dirigiu", "guia", "condutor"],
+    "comunicação e informação": ["informacao", "resposta", "respondeu", "duvida", "contato", "whatsapp", "mensagem", "avisou"],
     "reserva e pagamento": ["reserva", "agendamento", "pagamento", "pagar", "cartao", "booking", "paguei", "cobranca"],
-    "recomendacao": ["recomendo", "indico", "recommend", "recomiendo", "voltarei", "de novo", "sempre uso"],
+    "recomendação": ["recomendo", "indico", "recommend", "recomiendo", "voltarei", "de novo", "sempre uso"],
     "viagem e passeio": ["disney", "parque", "viagem", "passeio", "orlando", "aeroporto", "trip", "hotel", "outlet"],
-    "duvida ou pergunta": ["quanto", "como faco", "tem vaga", "voces atendem", "qual o valor", "how much", "info"],
+    "dúvida ou pergunta": ["quanto", "como faco", "tem vaga", "voces atendem", "qual o valor", "how much", "info"],
 }
 
 _PONTUACAO = re.compile(r"[^\w\s@#]", re.UNICODE)
@@ -161,10 +161,10 @@ def detectar_riscos(texto: str) -> list[str]:
 # atrasou no aeroporto"). O rotulo util para decisao e o atributo do servico,
 # nao o cenario — entao os temas de contexto ficam por ultimo.
 PRIORIDADE_TEMA = {
-    "pontualidade": 0, "atendimento": 0, "motorista e conducao": 0,
-    "qualidade do servico": 1, "conforto e estrutura": 1, "seguranca": 1,
-    "preco e custo": 1, "reserva e pagamento": 1, "comunicacao e informacao": 1,
-    "duvida ou pergunta": 2, "recomendacao": 2,
+    "pontualidade": 0, "atendimento": 0, "motorista e condução": 0,
+    "qualidade do serviço": 1, "conforto e estrutura": 1, "segurança": 1,
+    "preço e custo": 1, "reserva e pagamento": 1, "comunicação e informação": 1,
+    "dúvida ou pergunta": 2, "recomendação": 2,
     "viagem e passeio": 3, "assunto geral": 4,
 }
 
