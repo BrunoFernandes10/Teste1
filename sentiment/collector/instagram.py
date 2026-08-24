@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import os
 import re
+import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -38,7 +39,28 @@ class CollectionError(RuntimeError):
 
 
 # Textos dos botoes em pt/en/es — o Instagram varia conforme o idioma da conta.
-COOKIE_BUTTONS = ["Permitir todos os cookies", "Allow all cookies", "Permitir todas las cookies"]
+COOKIE_BUTTONS = [
+    "Permitir todos os cookies", "Allow all cookies", "Permitir todas las cookies",
+    "Aceitar tudo", "Aceitar todos", "Accept all", "Allow essential and optional cookies",
+    "Permitir cookies essenciais e opcionais", "Recusar cookies opcionais",
+    "Decline optional cookies", "Only allow essential cookies",
+]
+
+# O campo de usuario ja apareceu com varios nomes e rotulos. Tentamos todos
+# antes de concluir que a pagina de login nao carregou.
+CAMPOS_USUARIO = [
+    "input[name='username']",
+    "input[name='email']",
+    "input[aria-label*='usuário' i]",
+    "input[aria-label*='usuario' i]",
+    "input[aria-label*='username' i]",
+    "form input[type='text']",
+]
+CAMPOS_SENHA = [
+    "input[name='password']",
+    "input[type='password']",
+    "input[aria-label*='senha' i]",
+]
 DISMISS_BUTTONS = ["Agora não", "Not now", "Ahora no", "Not Now", "Cancelar", "Fechar"]
 MORE_COMMENTS = [
     "Carregar mais comentários", "Load more comments", "Cargar más comentarios",
@@ -285,9 +307,24 @@ class InstagramReader:
             await self.human.pause("media")
             await self._click_any(page, COOKIE_BUTTONS)
 
-        user_field = page.locator("input[name='username']").first
-        pass_field = page.locator("input[name='password']").first
-        await user_field.wait_for(state="visible", timeout=30000)
+        user_field = await self._achar_campo(page, CAMPOS_USUARIO, 25000)
+        if user_field is None:
+            # O Instagram nao mostrou o formulario. Pode ser consentimento,
+            # tela de "entrar ou cadastrar", bloqueio temporario ou desafio.
+            arquivo = await self._diagnostico(page, "sem-formulario-de-login")
+            if not self.settings.headless:
+                self.say("login", "Formulario nao apareceu — assuma na janela do Chrome.", 9)
+                return await self._login_manual(page, context, state_file)
+            raise LoginRequired(
+                "O Instagram nao exibiu o formulario de login. Isso costuma ser tela de "
+                "consentimento, verificacao de seguranca ou bloqueio temporario do IP.\n"
+                "Rode com HEADLESS=false para ver a janela e concluir o login a mao."
+                + (f"\nGuardei o que apareceu na tela em: {arquivo}" if arquivo else "")
+            )
+
+        pass_field = await self._achar_campo(page, CAMPOS_SENHA, 8000)
+        if pass_field is None:
+            pass_field = page.locator("input[type='password']").first
 
         await self.human.pause("curta")
         await self.human.type_text(user_field, self.settings.ig_username, page)
@@ -312,15 +349,101 @@ class InstagramReader:
         if not await self._is_logged_in(page):
             await self.human.pause("media")
             if not await self._is_logged_in(page):
+                arquivo = await self._diagnostico(page, "login-nao-concluido")
+                if not self.settings.headless:
+                    self.say("login", "O Instagram pediu algo a mais — resolva na janela do Chrome.", 10)
+                    return await self._login_manual(page, context, state_file)
                 raise LoginRequired(
-                    "O login nao foi concluido. Verifique usuario/senha ou finalize a verificacao "
-                    "manualmente na janela do Chrome (rode com HEADLESS=false)."
+                    "O login nao foi concluido. Verifique usuario e senha, ou rode com "
+                    "HEADLESS=false para concluir a verificacao na janela do Chrome."
+                    + (f"\nGuardei o que apareceu na tela em: {arquivo}" if arquivo else "")
                 )
         try:
             await context.storage_state(path=str(state_file))
         except Exception:
             pass
         self.say("login", "Conta autenticada.", 15)
+
+    async def _achar_campo(self, page, seletores: list[str], timeout: int):
+        """Devolve o primeiro campo visivel entre varios seletores possiveis.
+
+        O tempo total e respeitado no conjunto, nao por seletor: tentar seis
+        seletores com 25s cada faria a espera passar de dois minutos.
+        """
+        limite = time.monotonic() + timeout / 1000
+        while time.monotonic() < limite:
+            for seletor in seletores:
+                try:
+                    campo = page.locator(seletor).first
+                    if await campo.is_visible(timeout=600):
+                        return campo
+                except Exception:
+                    continue
+            await self._descartar_dialogos(page)
+            await asyncio.sleep(0.6)
+        return None
+
+    async def _descartar_dialogos(self, page) -> None:
+        """Tenta fechar o que estiver por cima do formulario."""
+        await self._click_any(page, COOKIE_BUTTONS)
+
+    async def _diagnostico(self, page, motivo: str) -> str:
+        """Guarda o que estava na tela quando algo deu errado.
+
+        Sem isso o navegador fecha junto com a falha e resta apenas uma
+        mensagem tecnica, sem a informacao que resolveria o caso.
+        """
+        try:
+            self.settings.ensure_dirs()
+            marca = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+            base = self.settings.runs_dir / f"diagnostico-{motivo}-{marca}"
+            await page.screenshot(path=f"{base}.png", full_page=True)
+            try:
+                texto = await page.inner_text("body", timeout=4000)
+            except Exception:
+                texto = ""
+            Path(f"{base}.txt").write_text(
+                f"URL: {page.url}\nMotivo: {motivo}\n\n{texto[:6000]}", encoding="utf-8"
+            )
+            self.notes.append(f"Diagnostico salvo em {base}.png")
+            return f"{base}.png"
+        except Exception:
+            return ""
+
+    async def _login_manual(self, page, context, state_file: Path, espera: int = 300) -> None:
+        """Entrega o volante para a pessoa concluir o login na janela aberta.
+
+        Desafio de seguranca, 2FA e telas novas do Instagram nao se resolvem por
+        automacao — e nem deveriam. Como a janela ja esta visivel, o caminho
+        honesto e pedir que a pessoa conclua e apenas aguardar.
+        """
+        self.say(
+            "login",
+            "Conclua o login na janela do Chrome que está aberta (código, captcha ou confirmação). "
+            f"Aguardo até {espera // 60} minutos.",
+            10,
+        )
+        limite = time.monotonic() + espera
+        while time.monotonic() < limite:
+            await asyncio.sleep(3)
+            try:
+                if await self._is_logged_in(page):
+                    try:
+                        await context.storage_state(path=str(state_file))
+                    except Exception:
+                        pass
+                    self.notes.append("Login concluido manualmente na janela do navegador.")
+                    self.say("login", "Login concluído. Seguindo com a leitura.", 15)
+                    return
+            except Exception:
+                continue
+            restante = int(limite - time.monotonic())
+            if restante % 30 < 3:
+                self.say("login", f"Aguardando o login na janela do Chrome... {restante}s restantes.", 10)
+        raise LoginRequired(
+            "O login nao foi concluido dentro do tempo. Deixe a janela do Chrome aberta, "
+            "conclua o que o Instagram pedir e rode a analise de novo — a sessao fica salva."
+        )
 
     async def _check_login_problems(self, page) -> None:
         if "/challenge/" in page.url or "/auth_platform/" in page.url:
