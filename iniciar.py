@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import getpass
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -123,20 +124,31 @@ def instalar_navegador() -> bool:
     return False
 
 
-def perguntar(rotulo: str, atual: str = "", segredo: bool = False) -> str:
-    """Pergunta um valor. Segredos nao aparecem na tela enquanto sao digitados."""
+USUARIO_VALIDO = re.compile(r"^[A-Za-z0-9._]{1,30}$")
+
+
+def perguntar(rotulo: str, atual: str = "", segredo: bool = False,
+              validar=None, ajuda: str = "") -> str:
+    """Pergunta um valor. Segredos nao aparecem na tela enquanto sao digitados.
+
+    Quando ha validacao, a pergunta se repete ate vir algo valido. Sem isso um
+    comando colado por engano vira "nome de usuario" e a falha so aparece muito
+    depois, na tela de login do Instagram, parecendo senha errada.
+    """
     sufixo = f" [{'*' * 6 if segredo and atual else atual}]" if atual else ""
     pergunta = f"      {rotulo}{sufixo}: "
-    try:
-        if segredo:
-            # Digitacao oculta: nada de senha visivel no terminal (nem em print
-            # de tela, nem no historico de rolagem).
-            resposta = getpass.getpass(pergunta).strip()
-        else:
-            resposta = input(pergunta).strip()
-    except (EOFError, KeyboardInterrupt):
-        return atual
-    return resposta or atual
+    for _ in range(5):
+        try:
+            resposta = (getpass.getpass(pergunta) if segredo else input(pergunta)).strip()
+        except (EOFError, KeyboardInterrupt):
+            return atual
+        valor = resposta or atual
+        if not valor or validar is None or validar(valor):
+            return valor
+        erro(f"valor invalido: {resposta[:40]!r}")
+        if ajuda:
+            print(f"      {ajuda}")
+    return atual
 
 
 def ler_env() -> dict[str, str]:
@@ -161,7 +173,15 @@ def configurar(interativo: bool) -> dict[str, str]:
 
     print("\n      Deixe em branco para pular — dá para editar o arquivo .env depois.")
     print("      As senhas não aparecem na tela enquanto você digita.\n")
-    valores["IG_USERNAME"] = perguntar("Usuário do Instagram (sem @)", valores.get("IG_USERNAME", "")).lstrip("@")
+    atual_usuario = valores.get("IG_USERNAME", "")
+    if atual_usuario and not USUARIO_VALIDO.match(atual_usuario):
+        aviso(f"o usuário salvo está inválido ({atual_usuario[:40]!r}) e será substituído.")
+        atual_usuario = ""
+    valores["IG_USERNAME"] = perguntar(
+        "Usuário do Instagram (sem @)", atual_usuario,
+        validar=lambda v: bool(USUARIO_VALIDO.match(v.lstrip("@"))),
+        ajuda="Só o nome da conta: letras, números, ponto e sublinhado. Sem espaços e sem comandos.",
+    ).lstrip("@")
     valores["IG_PASSWORD"] = perguntar("Senha do Instagram", valores.get("IG_PASSWORD", ""), segredo=True)
     print()
     print("      A chave da Anthropic melhora muito a análise (entende ironia e sarcasmo).")
