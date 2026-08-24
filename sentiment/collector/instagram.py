@@ -143,10 +143,16 @@ class InstagramReader:
         state_file = self.settings.session_dir / f"{self.settings.ig_username or 'anon'}.json"
 
         async with async_playwright() as pw:
-            browser = await self._launch(pw)
-            context = await self._new_context(browser, state_file)
+            browser = None
+            if self.settings.chrome_profile:
+                context = await self._abrir_perfil_real(pw)
+            else:
+                browser = await self._launch(pw)
+                context = await self._new_context(browser, state_file)
+
             await self.guard.install(context)
-            page = await context.new_page()
+            await self._injetar_sessao(context)
+            page = context.pages[0] if context.pages else await context.new_page()
             page.on("response", self._on_response)
 
             try:
@@ -159,8 +165,12 @@ class InstagramReader:
                     await context.storage_state(path=str(state_file))
                 except Exception:
                     pass
-                await context.close()
-                await browser.close()
+                try:
+                    await context.close()
+                except Exception:
+                    pass
+                if browser is not None:
+                    await browser.close()
 
         capture = Capture(
             profile=profile,
@@ -170,6 +180,64 @@ class InstagramReader:
             notes=self.notes,
         )
         return SessionResult(capture=capture, guard_report=self.guard.report())
+
+    async def _abrir_perfil_real(self, pw):
+        """Abre o Chrome no perfil de verdade da pessoa.
+
+        E o caminho mais limpo: se ela ja esta logada no Instagram no navegador
+        do dia a dia, nao ha login a fazer e nao ha formulario para o Instagram
+        recusar. O preco e que o Chrome precisa estar fechado, porque o perfil
+        fica travado por quem o abriu primeiro.
+        """
+        caminho = Path(self.settings.chrome_profile).expanduser()
+        if not caminho.exists():
+            raise CollectionError(
+                f"Perfil do Chrome nao encontrado em: {caminho}\n"
+                "Confira o valor de CHROME_PROFILE no arquivo .env."
+            )
+        args = ["--disable-blink-features=AutomationControlled", "--no-first-run"]
+        if self.settings.chrome_profile_name:
+            args.append(f"--profile-directory={self.settings.chrome_profile_name}")
+        try:
+            contexto = await pw.chromium.launch_persistent_context(
+                user_data_dir=str(caminho),
+                headless=False,  # perfil real so faz sentido com janela visivel
+                channel="chrome",
+                args=args,
+                viewport={"width": 1440, "height": 900},
+                locale="pt-BR",
+            )
+        except Exception as exc:
+            raise CollectionError(
+                "Nao consegui abrir o seu perfil do Chrome. Feche o Chrome por completo "
+                "(inclusive o icone ao lado do relogio) e tente de novo.\n"
+                f"Detalhe: {str(exc).splitlines()[0]}"
+            ) from exc
+        self.notes.append("Sessao aproveitada do perfil real do Chrome.")
+        await contexto.add_init_script(
+            "Object.defineProperty(navigator,'webdriver',{get:()=>undefined});"
+        )
+        return contexto
+
+    async def _injetar_sessao(self, context) -> None:
+        """Instala o cookie de sessao copiado de um navegador ja autenticado."""
+        if not self.settings.ig_sessionid:
+            return
+        try:
+            await context.add_cookies([
+                {
+                    "name": "sessionid",
+                    "value": self.settings.ig_sessionid,
+                    "domain": ".instagram.com",
+                    "path": "/",
+                    "httpOnly": True,
+                    "secure": True,
+                    "sameSite": "Lax",
+                }
+            ])
+            self.notes.append("Sessao instalada a partir do cookie informado.")
+        except Exception as exc:
+            self.notes.append(f"Nao consegui instalar o cookie de sessao: {exc}")
 
     async def _launch(self, pw):
         args = [
@@ -472,7 +540,7 @@ class InstagramReader:
         except Exception:
             return ""
 
-    async def _login_manual(self, page, context, state_file: Path, espera: int = 300) -> None:
+    async def _login_manual(self, page, context, state_file: Path, espera: int = 900) -> None:
         """Entrega o volante para a pessoa concluir o login na janela aberta.
 
         Desafio de seguranca, 2FA e telas novas do Instagram nao se resolvem por

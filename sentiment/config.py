@@ -66,6 +66,15 @@ class Settings:
     # Instagram costuma recusar login automatizado mesmo com a senha correta;
     # entrando a mao uma vez, a sessao fica salva e as proximas sao diretas.
     login_manual: bool = field(default_factory=lambda: _bool("LOGIN_MANUAL", False))
+
+    # Caminho do perfil real do Chrome. Usando o perfil onde a pessoa ja esta
+    # logada, nao ha login a fazer — e o Instagram nao tem formulario para
+    # recusar. Exige que o Chrome esteja completamente fechado.
+    chrome_profile: str = field(default_factory=lambda: os.getenv("CHROME_PROFILE", "").strip().strip('"'))
+    chrome_profile_name: str = field(default_factory=lambda: os.getenv("CHROME_PROFILE_NAME", "Default").strip())
+
+    # Alternativa: o cookie de sessao copiado do navegador ja autenticado.
+    ig_sessionid: str = field(default_factory=lambda: os.getenv("IG_SESSIONID", "").strip().strip('"'))
     headless: bool = field(default_factory=lambda: _bool("HEADLESS", False))
     max_posts: int = field(default_factory=lambda: _int("MAX_POSTS", 40))
     max_comments_per_post: int = field(default_factory=lambda: _int("MAX_COMMENTS_PER_POST", 150))

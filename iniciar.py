@@ -151,6 +151,23 @@ def perguntar(rotulo: str, atual: str = "", segredo: bool = False,
     return atual
 
 
+def perfil_chrome_padrao() -> str:
+    """Onde o Chrome guarda os perfis, conforme o sistema."""
+    candidatos = []
+    if os.name == "nt":
+        base = os.getenv("LOCALAPPDATA", "")
+        if base:
+            candidatos.append(Path(base) / "Google" / "Chrome" / "User Data")
+    elif sys.platform == "darwin":
+        candidatos.append(Path.home() / "Library" / "Application Support" / "Google" / "Chrome")
+    else:
+        candidatos.append(Path.home() / ".config" / "google-chrome")
+    for caminho in candidatos:
+        if caminho.exists():
+            return str(caminho)
+    return ""
+
+
 def ler_env() -> dict[str, str]:
     valores: dict[str, str] = {}
     if ENV.exists():
@@ -183,6 +200,16 @@ def configurar(interativo: bool) -> dict[str, str]:
         ajuda="Só o nome da conta: letras, números, ponto e sublinhado. Sem espaços e sem comandos.",
     ).lstrip("@")
     valores["IG_PASSWORD"] = perguntar("Senha do Instagram", valores.get("IG_PASSWORD", ""), segredo=True)
+    # Aproveitar o Chrome do dia a dia dispensa o login por completo — e o
+    # Instagram costuma recusar login automatizado mesmo com a senha correta.
+    perfil = perfil_chrome_padrao()
+    if perfil:
+        print()
+        print("      Encontrei o seu Chrome. Usar a sessão que já está logada nele")
+        print("      evita a tela de login por completo (o Chrome precisa estar fechado).")
+        usar = perguntar("Usar o seu Chrome? (s/n)", "s" if valores.get("CHROME_PROFILE") else "n")
+        valores["CHROME_PROFILE"] = perfil if usar.lower().startswith("s") else ""
+
     print()
     print("      A chave da Anthropic melhora muito a análise (entende ironia e sarcasmo).")
     print("      Pegue em https://console.anthropic.com  — ou deixe em branco por ora.")
@@ -208,6 +235,11 @@ def diagnostico(valores: dict[str, str]) -> None:
     else:
         aviso("sem conta configurada — só o modo demonstração vai funcionar")
         print("      Preencha IG_USERNAME e IG_PASSWORD no arquivo .env")
+
+    if valores.get("CHROME_PROFILE"):
+        ok("vai usar a sessão do seu Chrome — feche o Chrome antes de analisar")
+    elif valores.get("IG_SESSIONID"):
+        ok("vai usar o cookie de sessão informado")
 
     if valores.get("ANTHROPIC_API_KEY"):
         ok("analista de IA ativo")
