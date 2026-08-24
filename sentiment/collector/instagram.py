@@ -130,6 +130,7 @@ class InstagramReader:
         self.guard = ReadOnlyGuard()
         self._progress = progress or (lambda stage, msg, pct: None)
         self._current_post_id = ""
+        self._sessao_injetada = False
         self.notes: list[str] = []
 
     def say(self, stage: str, message: str, percent: int) -> None:
@@ -143,16 +144,14 @@ class InstagramReader:
         self.settings.ensure_dirs()
         state_file = self.settings.session_dir / f"{self.settings.ig_username or 'anon'}.json"
 
+        cookies_do_chrome = self._colher_cookies_do_chrome()
+
         async with async_playwright() as pw:
-            browser = None
-            if self.settings.chrome_profile:
-                context = await self._abrir_perfil_real(pw)
-            else:
-                browser = await self._launch(pw)
-                context = await self._new_context(browser, state_file)
+            browser = await self._launch(pw)
+            context = await self._new_context(browser, state_file)
 
             await self.guard.install(context)
-            await self._injetar_sessao(context)
+            await self._injetar_sessao(context, cookies_do_chrome)
             page = context.pages[0] if context.pages else await context.new_page()
             page.on("response", self._on_response)
 
@@ -276,25 +275,42 @@ class InstagramReader:
         self.notes.append(f"Copia do perfil preparada ({copiados} item(ns)).")
         return destino
 
-    async def _injetar_sessao(self, context) -> None:
-        """Instala o cookie de sessao copiado de um navegador ja autenticado."""
-        if not self.settings.ig_sessionid:
-            return
+    def _colher_cookies_do_chrome(self) -> list[dict]:
+        """Le a sessao ja logada no Chrome, sem abrir tela de login.
+
+        Falhar aqui nunca interrompe a analise: apenas cai para o proximo
+        metodo (cookie manual ou login na janela) com o motivo anotado.
+        """
+        if not self.settings.chrome_profile:
+            return []
         try:
-            await context.add_cookies([
-                {
-                    "name": "sessionid",
-                    "value": self.settings.ig_sessionid,
-                    "domain": ".instagram.com",
-                    "path": "/",
-                    "httpOnly": True,
-                    "secure": True,
-                    "sameSite": "Lax",
-                }
-            ])
-            self.notes.append("Sessao instalada a partir do cookie informado.")
+            from .chrome_cookies import extrair_cookies
+
+            cookies = extrair_cookies(self.settings.chrome_profile, self.settings.chrome_profile_name or "Default")
+            self.notes.append(f"Sessão lida do Chrome ({len(cookies)} cookies) — sem tela de login.")
+            return cookies
         except Exception as exc:
-            self.notes.append(f"Nao consegui instalar o cookie de sessao: {exc}")
+            self.notes.append(f"Não consegui ler a sessão do Chrome: {exc}")
+            return []
+
+    async def _injetar_sessao(self, context, cookies_do_chrome: list[dict] | None = None) -> None:
+        """Instala uma sessao ja autenticada, evitando a tela de login."""
+        cookies = list(cookies_do_chrome or [])
+        if self.settings.ig_sessionid and not any(c["name"] == "sessionid" for c in cookies):
+            cookies.append({
+                "name": "sessionid", "value": self.settings.ig_sessionid,
+                "domain": ".instagram.com", "path": "/", "httpOnly": True, "secure": True,
+            })
+        if not cookies:
+            return
+        for c in cookies:
+            c.setdefault("sameSite", "Lax")
+        try:
+            await context.add_cookies(cookies)
+            self._sessao_injetada = True
+            self.notes.append(f"Sessão instalada com {len(cookies)} cookie(s) — não deve pedir login.")
+        except Exception as exc:
+            self.notes.append(f"Não consegui instalar os cookies de sessão: {exc}")
 
     async def _launch(self, pw):
         args = [
@@ -416,10 +432,20 @@ class InstagramReader:
 
     async def _ensure_login(self, page, context, state_file: Path) -> None:
         if await self._is_logged_in(page):
-            self.say("login", "Sessão já autenticada — seguindo direto.", 15)
+            origem = "sessão do Chrome" if self._sessao_injetada else "sessão salva"
+            self.say("login", f"Entrou pela {origem} — sem tela de login.", 15)
             return
 
         visivel = not self.settings.headless
+
+        # Cookies injetados mas a pagina nao abriu logada: a sessao do Chrome
+        # expirou. Nao adianta o formulario (o Instagram recusa login
+        # automatizado); vamos direto para a janela.
+        if self._sessao_injetada:
+            self.notes.append("A sessão do Chrome não estava mais válida.")
+            if visivel:
+                self.say("login", "A sessão do Chrome expirou — entre na janela do Chrome.", 9)
+                return await self._login_manual(page, context, state_file)
         marca_de_falha = self.settings.session_dir / f"{self.settings.ig_username or 'anon'}.sem-auto"
 
         # Situacoes em que preencher o formulario e so perder tempo e chamar

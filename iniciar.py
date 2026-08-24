@@ -213,10 +213,10 @@ def configurar(interativo: bool) -> dict[str, str]:
     perfil = perfil_chrome_padrao()
     if perfil:
         print()
-        print("      Encontrei o seu Chrome. Se você já está logado no Instagram nele,")
-        print("      o sistema aproveita essa sessão e nem passa pela tela de login.")
-        print("      Ele trabalha sobre uma cópia, então pode deixar o Chrome aberto.")
-        usar = perguntar("Usar o seu Chrome? (s/n)", "s" if valores.get("CHROME_PROFILE") else "n")
+        print("      Encontrei o seu Chrome. Se você está logado no Instagram nele, o")
+        print("      sistema lê essa sessão e NÃO passa pela tela de login — que é onde")
+        print("      o Instagram vinha recusando a senha. Recomendado.")
+        usar = perguntar("Usar a sessão do seu Chrome? (s/n)", "s" if valores.get("CHROME_PROFILE") else "n")
         valores["CHROME_PROFILE"] = perfil if usar.lower().startswith("s") else ""
 
     print()
