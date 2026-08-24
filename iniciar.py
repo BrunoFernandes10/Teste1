@@ -81,10 +81,27 @@ def instalar_dependencias() -> bool:
         return True
     except ImportError:
         pass
-    return rodar(
+    if rodar(
         [sys.executable, "-m", "pip", "install", "-q", "-r", str(RAIZ / "requirements.txt")],
         "baixando (pode levar 1-2 minutos)",
-    )
+    ):
+        return True
+
+    # Uma unica biblioteca sem versao pronta para este Python derruba o lote
+    # inteiro. Instalando uma a uma, o que der certo fica instalado e o
+    # diagnostico aponta exatamente a que faltou.
+    aviso("a instalacao em bloco falhou; tentando uma biblioteca por vez.")
+    essenciais = ["fastapi", "uvicorn", "playwright", "anthropic", "python-dotenv", "pydantic"]
+    faltando = [
+        nome for nome in essenciais
+        if not rodar([sys.executable, "-m", "pip", "install", "-q", nome], f"instalando {nome}")
+    ]
+    if faltando:
+        erro("nao consegui instalar: " + ", ".join(faltando))
+        print("      Tente manualmente:")
+        print(f"      {sys.executable} -m pip install " + " ".join(faltando))
+        return False
+    return True
 
 
 def instalar_navegador() -> bool:
