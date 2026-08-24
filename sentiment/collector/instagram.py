@@ -291,14 +291,43 @@ class InstagramReader:
 
     async def _ensure_login(self, page, context, state_file: Path) -> None:
         if await self._is_logged_in(page):
-            self.say("login", "Sessao ja autenticada — seguindo direto.", 15)
+            self.say("login", "Sessão já autenticada — seguindo direto.", 15)
             return
 
+        visivel = not self.settings.headless
+
+        # Pedido explicito de entrar a mao.
+        if self.settings.login_manual and visivel:
+            return await self._login_manual(page, context, state_file)
+
         if not self.settings.ig_username or not self.settings.ig_password:
+            if visivel:
+                self.say("login", "Sem credenciais salvas — entre na janela do Chrome.", 9)
+                return await self._login_manual(page, context, state_file)
             raise LoginRequired(
-                "Defina IG_USERNAME e IG_PASSWORD no arquivo .env para que o sistema possa entrar na conta."
+                "Defina IG_USERNAME e IG_PASSWORD no arquivo .env, ou rode com HEADLESS=false "
+                "para entrar a mão na janela do Chrome."
             )
 
+        try:
+            await self._login_automatico(page, context, state_file)
+        except LoginRequired:
+            raise
+        except Exception as exc:
+            # Qualquer imprevisto no formulario: com a janela aberta na frente
+            # da pessoa, insistir na automacao e pior do que pedir ajuda.
+            arquivo = await self._diagnostico(page, "falha-no-login-automatico")
+            if visivel:
+                self.notes.append(f"Login automático falhou ({type(exc).__name__}); concluído à mão.")
+                self.say("login", "O login automático não passou — assuma na janela do Chrome.", 9)
+                return await self._login_manual(page, context, state_file)
+            raise LoginRequired(
+                f"Falha no login automático: {exc}"
+                + (f"\nGuardei o que apareceu em: {arquivo}" if arquivo else "")
+            )
+
+    async def _login_automatico(self, page, context, state_file: Path) -> None:
+        """Preenche o formulário de login imitando uma pessoa digitando."""
         self.say("login", "Entrando na conta como uma pessoa faria...", 8)
         if "/accounts/login" not in page.url:
             await page.goto(
@@ -331,8 +360,14 @@ class InstagramReader:
         await self.human.type_text(pass_field, self.settings.ig_password, page)
         await self.human.pause("curta")
 
-        submit = page.locator("button[type='submit']").first
-        await self.human.click(submit, page)
+        if not await self._clicar_entrar(page, pass_field):
+            arquivo = await self._diagnostico(page, "sem-botao-entrar")
+            if not self.settings.headless:
+                return await self._login_manual(page, context, state_file)
+            raise LoginRequired(
+                "Nao encontrei o botao de entrar na tela do Instagram."
+                + (f"\nGuardei o que apareceu em: {arquivo}" if arquivo else "")
+            )
         self.say("login", "Aguardando a confirmacao do Instagram...", 12)
 
         try:
@@ -363,6 +398,33 @@ class InstagramReader:
         except Exception:
             pass
         self.say("login", "Conta autenticada.", 15)
+
+    async def _clicar_entrar(self, page, campo_senha) -> bool:
+        """Aciona o envio do formulario.
+
+        O botao ja apareceu como <button type=submit>, como <div role=button> e
+        so com o rotulo textual. Apertar Enter no campo de senha funciona em
+        todas as variantes, entao ele fica como ultimo recurso.
+        """
+        for seletor in (
+            "button[type='submit']",
+            "button:has-text('Entrar')",
+            "button:has-text('Log in')",
+            "div[role='button']:has-text('Entrar')",
+            "div[role='button']:has-text('Log in')",
+        ):
+            try:
+                botao = page.locator(seletor).first
+                if await botao.is_visible(timeout=1500):
+                    await self.human.click(botao, page)
+                    return True
+            except Exception:
+                continue
+        try:
+            await campo_senha.press("Enter")
+            return True
+        except Exception:
+            return False
 
     async def _achar_campo(self, page, seletores: list[str], timeout: int):
         """Devolve o primeiro campo visivel entre varios seletores possiveis.

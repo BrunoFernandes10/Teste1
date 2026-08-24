@@ -62,6 +62,10 @@ class Settings:
     analyst_model: str = field(default_factory=lambda: os.getenv("ANALYST_MODEL", "claude-opus-5"))
 
     pace: str = field(default_factory=lambda: os.getenv("HUMAN_PACE", "normal").strip().lower())
+    # Entrar a mao na janela do Chrome em vez de preencher o formulario. O
+    # Instagram costuma recusar login automatizado mesmo com a senha correta;
+    # entrando a mao uma vez, a sessao fica salva e as proximas sao diretas.
+    login_manual: bool = field(default_factory=lambda: _bool("LOGIN_MANUAL", False))
     headless: bool = field(default_factory=lambda: _bool("HEADLESS", False))
     max_posts: int = field(default_factory=lambda: _int("MAX_POSTS", 40))
     max_comments_per_post: int = field(default_factory=lambda: _int("MAX_COMMENTS_PER_POST", 150))

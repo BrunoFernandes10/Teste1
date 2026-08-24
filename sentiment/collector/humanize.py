@@ -115,10 +115,19 @@ class Human:
         await self.pause("curta")
 
     async def type_text(self, locator, text: str, page=None) -> None:
-        """Digitacao caractere a caractere, com ritmo irregular."""
+        """Digitacao caractere a caractere, com ritmo irregular.
+
+        O campo e esvaziado antes: o Chrome preenche formularios sozinho e uma
+        tentativa anterior pode ter deixado texto. Digitar por cima concatena os
+        dois e o Instagram responde "senha incorreta" com a senha certa.
+        """
         await self.hover(locator, page)
         try:
             await locator.click(timeout=10000)
+        except Exception:
+            pass
+        try:
+            await locator.fill("")
         except Exception:
             pass
         await self.pause("micro")
